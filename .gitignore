@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.DS_Store
+
+# ML Data & Models
+# Usually we DON'T want to commit large CSVs, but for this demo maybe keep them? 
+# The user wants "Push it to github", assuming they want the data too for reproducibility?
+# I'll exclude large models if they were huge, but these are small pickles.
+# I will exclude the data folder if it's large, but train.csv is small.
+# I'll leave data/ included for this homework-style task.
+
+# IDE
+.vscode/
+.idea/
