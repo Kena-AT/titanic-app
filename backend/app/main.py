@@ -1,3 +1,23 @@
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Going up two levels to reach the true project root (app -> backend -> root)
+project_root = os.path.dirname(os.path.dirname(current_dir))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Also add the backend directory to sys.path to support 'import app' for unpickling
+backend_dir = os.path.dirname(current_dir)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+# Fallback alias for unpickler
+try:
+    import app
+except ImportError:
+    pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import router
@@ -11,7 +31,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, allow all. In prod, specify frontend domain.
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,31 +41,19 @@ app.add_middleware(
 app.include_router(router)
 
 # Serve Frontend (Monolithic Middleware)
-import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# Adjust paths based on where main.py is run
-# Assuming running from root or backend/
-# We need to find 'frontend/dist'
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIST = os.path.join(BASE_DIR, "../../frontend/dist")
+# frontend/dist is sibling to app/
+FRONTEND_DIST = os.path.join(project_root, "frontend/dist")
 
 if os.path.exists(FRONTEND_DIST):
-    # Serve assets (JS/CSS)
-    # Vite usually puts them in 'assets/'
     assets_dir = os.path.join(FRONTEND_DIST, "assets")
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-
-    # Serve other static files (favicon, etc) if needed, or just root
-    # app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static") 
-    # BUT, for SPA, we usually want to serve index.html for unknown routes
     
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        # Allow API routes to pass through (handled above by router)
-        # If it's a file that exists, serve it
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if os.path.exists(file_path) and os.path.isfile(file_path):
              return FileResponse(file_path)

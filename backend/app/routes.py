@@ -18,10 +18,6 @@ class Passenger(BaseModel):
 def predict_survival(passenger: Passenger, model_type: str = "random_forest"):
     # Convert input to DataFrame
     input_data = passenger.dict()
-    # Ensure Name mimics the training data format if it's just a plain string?
-    # The transformer expects "Title. Name". If user sends "John Doe", title extraction might fail or be empty.
-    # We should probably urge the frontend to send a name, or we accept it as is.
-    # If the user sends just "Age", we need to handle that.
     
     input_df = pd.DataFrame([input_data])
     
@@ -33,9 +29,6 @@ def predict_survival(passenger: Passenger, model_type: str = "random_forest"):
     else:
         # Fallback
         model = decision_tree_model
-    
-    # Predict
-    # The model should be a Pipeline that starts with TitanicFeatureEngineer
     try:
         pred = model.predict(input_df)[0]
         proba = model.predict_proba(input_df)[0][1]  # Probability of survival

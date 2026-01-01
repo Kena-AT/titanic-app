@@ -5,7 +5,10 @@ import numpy as np
 class TitanicFeatureEngineer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         X_ = X.copy()
-        self.age_median_ = X_['Age'].median()
+        # Smarter Age Imputation: Median by Sex and Pclass
+        self.age_medians_ = X_.groupby(['Sex', 'Pclass'])['Age'].median().to_dict()
+        self.global_age_median_ = X_['Age'].median()
+        
         self.fare_median_ = X_['Fare'].median()
         
         # Learn fare bins
@@ -19,15 +22,20 @@ class TitanicFeatureEngineer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X = X.copy()
 
-        # 1. Age Imputation (Simple Global Median)
+        # 1. Age Imputation (Grouped Median)
         if 'Age' in X.columns:
-            X['Age'] = X['Age'].fillna(self.age_median_)
+            # Apply grouped median
+            X['Age'] = X.apply(
+                lambda row: row['Age'] if pd.notnull(row['Age']) 
+                else self.age_medians_.get((row['Sex'], row['Pclass']), self.global_age_median_),
+                axis=1
+            )
         else:
-            X['Age'] = self.age_median_
+            X['Age'] = self.global_age_median_
 
         # 2. Fare Handling
         if 'Fare' not in X.columns:
-             X['Fare'] = np.nan
+             X['Fare'] = self.fare_median_
         X['Fare'] = X['Fare'].fillna(self.fare_median_)
         
         if len(self.fare_bins_) > 0:
@@ -37,12 +45,10 @@ class TitanicFeatureEngineer(BaseEstimator, TransformerMixin):
         else:
             X['FareBand'] = 0
 
-        # 3. Child logic (Derived from Age/Sex)
-        if 'Sex' not in X.columns: X['Sex'] = 'male'
+        # 3. Child logic
         X['IsChild'] = (X['Age'] <= 16).astype(int)
-        X['MaleChild'] = ((X['Sex'] == 'male') & (X['Age'] <= 16)).astype(int)
         
-        # We process ONLY Pclass, Sex, Age, Fare, and the derived FareBand/IsChild/MaleChild
-        # The ColumnTransformer will select what it needs.
+        # Ensure Sex is present for downstream one-hot encoding
+        if 'Sex' not in X.columns: X['Sex'] = 'male'
         
         return X
