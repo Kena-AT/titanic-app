@@ -40,7 +40,7 @@ function App() {
     setPrediction(null); // Reset previous prediction to show loading effectively if needed, though we persist result area
     try {
       const response = await axios.post(
-        `http://127.0.0.1:8000/predict?model_type=${selectedModel}`,
+        `/predict?model_type=${selectedModel}`,
         formData
       );
       setPrediction(response.data);
